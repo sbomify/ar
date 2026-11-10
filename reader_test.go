@@ -123,4 +123,9 @@ func TestNegativeSize(t *testing.T) {
 	if _, err := reader.Next(); err != ErrNegativeSize {
 		t.Fatalf("Next() error = %v, want ErrNegativeSize", err)
 	}
+
+	// A rejected header must leave Read safe to call, without a negative bound.
+	if n, err := reader.Read(make([]byte, 1)); n != 0 || err != io.EOF {
+		t.Fatalf("Read() after rejected header = (%d, %v), want (0, io.EOF)", n, err)
+	}
 }
