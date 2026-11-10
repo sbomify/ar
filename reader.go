@@ -22,6 +22,7 @@ THE SOFTWARE.
 package ar
 
 import (
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -58,6 +59,11 @@ func NewReader(r io.Reader) *Reader {
 
 	return &Reader{r: r}
 }
+
+// ErrNegativeSize is returned by Next when a member header declares a
+// negative size. Accepting it would make Read slice the caller's buffer
+// with a negative bound and panic (GO-2026-6905).
+var ErrNegativeSize = errors.New("ar: negative member size in header")
 
 func (rd *Reader) string(b []byte) string {
 	i := len(b)-1
@@ -117,6 +123,9 @@ func (rd *Reader) readHeader() (*Header, error) {
 	header.Gid = int(rd.numeric(s.next(6)))
 	header.Mode = rd.octal(s.next(8))
 	header.Size = rd.numeric(s.next(10))
+	if header.Size < 0 {
+		return nil, ErrNegativeSize
+	}
 
 	rd.nb = int64(header.Size)
 	if header.Size%2 == 1 {

@@ -23,6 +23,7 @@ package ar
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"testing"
@@ -109,5 +110,17 @@ func TestReadMulti(t *testing.T) {
 	actual := buf.Bytes()
 	if !bytes.Equal(expected, actual) {
 		t.Errorf("Concatted byte buffer should be %s but is %s", expected, actual)
+	}
+}
+
+func TestNegativeSize(t *testing.T) {
+	var buf bytes.Buffer
+	buf.WriteString(GLOBAL_HEADER)
+	// 16 name, 12 mtime, 6 uid, 6 gid, 8 mode, 10 size, 2 magic
+	buf.WriteString(fmt.Sprintf("%-16s%-12s%-6s%-6s%-8s%-10s`\n", "evil", "0", "0", "0", "100644", "-100"))
+
+	reader := NewReader(&buf)
+	if _, err := reader.Next(); err != ErrNegativeSize {
+		t.Fatalf("Next() error = %v, want ErrNegativeSize", err)
 	}
 }
